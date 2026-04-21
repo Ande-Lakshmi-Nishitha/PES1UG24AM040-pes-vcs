@@ -20,7 +20,9 @@ Command:
 ./test_objects
 
 Output:
+screenshot 1_a
 
+### 
 
 ---
 
@@ -32,8 +34,7 @@ Command:
 ./test_tree
 
 Output:
-PASS: tree serialize/parse roundtrip  
-PASS: tree deterministic serialization  
+screenshot 2_a
 
 ### Raw Tree Object
 
@@ -41,14 +42,7 @@ Command:
 xxd .pes/objects/<tree-object> | head -20
 
 Output:
-7472 6565 2034 3900 3130 3036 3434 2068  
-656c 6c6f 2e74 7874 00...  
-
-This shows a tree object containing:
-- header: tree <size>\0  
-- file mode: 100644  
-- filename  
-- binary SHA-256 hash  
+screenshot 2_b
 
 ---
 
@@ -60,15 +54,7 @@ Command:
 ./pes status
 
 Output:
-Staged changes:  
-  staged:     file1.txt  
-  staged:     file2.txt  
-
-Unstaged changes:  
-  (nothing to show)  
-
-Untracked files:  
-  (multiple files listed)  
+screenshot 3_a
 
 ---
 
@@ -78,8 +64,7 @@ Command:
 cat .pes/index
 
 Output:
-100644 <hash> <mtime> 6 file1.txt  
-100644 <hash> <mtime> 6 file2.txt  
+screenshot 3_b
 
 ---
 
@@ -91,17 +76,7 @@ Command:
 ./pes log
 
 Output:
-commit <latest_hash>  
-Author: Ande Lakshmi Nishitha  
-Date: <timestamp>  
-
-    Add farewell  
-
-commit <previous_hash>  
-Author: Ande Lakshmi Nishitha  
-Date: <timestamp>  
-
-    Initial commit  
+screenshot 4_a
 
 ---
 
@@ -111,11 +86,7 @@ Command:
 find .pes -type f | sort
 
 Output:
-.pes/objects/...  
-.pes/objects/...  
-.pes/objects/...  
-
-This shows the creation of blob, tree, and commit objects.
+screenshot 4_b
 
 ---
 
@@ -126,11 +97,7 @@ cat .pes/refs/heads/main
 cat .pes/HEAD  
 
 Output:
-<commit_hash>  
-ref: refs/heads/main  
-
-This represents:
-HEAD → refs/heads/main → commit  
+screenshot 4_c
 
 ---
 
