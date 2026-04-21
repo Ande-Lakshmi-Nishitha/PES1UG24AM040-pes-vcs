@@ -58,4 +58,6 @@ static inline const char* pes_author(void) {
     return (env && env[0]) ? env : DEFAULT_AUTHOR;
 }
 
+int object_write(ObjectType type, const void *data, size_t len, ObjectID *id_out);
+
 #endif // PES_H

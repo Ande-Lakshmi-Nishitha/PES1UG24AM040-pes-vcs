@@ -23,7 +23,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <dirent.h>
-
+#include "pes.h"
 // ─── PROVIDED ────────────────────────────────────────────────────────────────
 
 // Find an index entry by path (linear scan).
@@ -134,11 +134,42 @@ int index_status(const Index *index) {
 //   - hex_to_hash                      : converting the parsed string to ObjectID
 //
 // Returns 0 on success, -1 on error.
+
 int index_load(Index *index) {
-    // TODO: Implement index loading
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+    index->count = 0;
+
+    FILE *fp = fopen(".pes/index", "r");
+    if (!fp) {
+        index->count = 0;
+        return 0; // no index yet is OK
+    }
+
+    index->count = 0;
+
+    char hex[HASH_HEX_SIZE + 1];
+
+    while (1) {
+        IndexEntry *e = &index->entries[index->count];
+
+        int ret = fscanf(fp, "%o %s %lu %u %s",
+                         &e->mode,
+                         hex,
+                         &e->mtime_sec,
+                         &e->size,
+                         e->path);
+
+        if (ret != 5) break;
+
+        if (hex_to_hash(hex, &e->hash) != 0) {
+            fclose(fp);
+            return -1;
+        }
+
+        index->count++;
+    }
+
+    fclose(fp);
+    return 0;
 }
 
 // Save the index to .pes/index atomically.
@@ -146,16 +177,38 @@ int index_load(Index *index) {
 // HINTS - Useful functions and syscalls:
 //   - qsort                            : sorting the entries array by path
 //   - fopen (with "w"), fprintf        : writing to the temporary file
-//   - hash_to_hex                      : converting ObjectID for text output
+//   - hh_to_hex                      : converting ObjectID for text output
 //   - fflush, fileno, fsync, fclose    : flushing userspace buffers and syncing to disk
 //   - rename                           : atomically moving the temp file over the old index
 //
 // Returns 0 on success, -1 on error.
+static int compare_entries(const void *a, const void *b) {
+    return strcmp(((IndexEntry *)a)->path, ((IndexEntry *)b)->path);
+}
+
 int index_save(const Index *index) {
-    // TODO: Implement atomic index saving
-    // (See Lab Appendix for logical steps)
-    (void)index;
-    return -1;
+    FILE *fp = fopen(".pes/index.tmp", "w");
+    if (!fp) return -1;
+
+    char hex[HASH_HEX_SIZE + 1];
+
+    for (int i = 0; i < index->count; i++) {
+        hash_to_hex(&index->entries[i].hash, hex);
+
+        fprintf(fp, "%o %s %lu %u %s\n",
+                index->entries[i].mode,
+                hex,
+                index->entries[i].mtime_sec,
+                index->entries[i].size,
+                index->entries[i].path);
+    }
+
+    fflush(fp);
+    fsync(fileno(fp));
+    fclose(fp);
+
+    rename(".pes/index.tmp", ".pes/index");
+    return 0;
 }
 
 // Stage a file for the next commit.
@@ -168,8 +221,48 @@ int index_save(const Index *index) {
 //
 // Returns 0 on success, -1 on error.
 int index_add(Index *index, const char *path) {
-    // TODO: Implement file staging
-    // (See Lab Appendix for logical steps)
-    (void)index; (void)path;
-    return -1;
+    struct stat st;
+    if (stat(path, &st) != 0) return -1;
+
+    FILE *fp = fopen(path, "rb");
+    if (!fp) return -1;
+
+    void *buffer = malloc(st.st_size ? st.st_size : 1);
+    if (!buffer) {
+        fclose(fp);
+        return -1;
+    }
+
+    if (fread(buffer, 1, st.st_size, fp) != (size_t)st.st_size) {
+        free(buffer);
+        fclose(fp);
+        return -1;
+    }
+    fclose(fp);
+
+    ObjectID id;
+    if (object_write(OBJ_BLOB, buffer, st.st_size, &id) != 0) {
+        free(buffer);
+        return -1;
+    }
+
+    free(buffer);
+
+    IndexEntry *e = index_find(index, path);
+    if (!e) {
+        if (index->count >= MAX_INDEX_ENTRIES) {
+	    fprintf(stderr, "error: index is full\n");
+	    return -1;
+    	}
+
+        e = &index->entries[index->count++];
+    }
+
+    e->mode = st.st_mode & 0777 ? (st.st_mode & 0100 ? 0100755 : 0100644) : 0100644;
+    e->hash = id;
+    e->mtime_sec = st.st_mtime;
+    e->size = st.st_size;
+    strcpy(e->path, path);
+
+    return index_save(index);
 }
