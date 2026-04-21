@@ -203,7 +203,7 @@ int object_read(const ObjectID *id, ObjectType *type_out, void **data_out, size_
     ObjectID check;
     compute_hash(buffer, size, &check);
 
-    if (memcmp(&check, id, sizeof(ObjectID)) != 0) {
+    if (memcmp(check.hash, id->hash, HASH_SIZE) != 0) {
         free(buffer);
         return -1;
     }
