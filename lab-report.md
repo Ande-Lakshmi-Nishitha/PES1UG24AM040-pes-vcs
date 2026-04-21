@@ -22,7 +22,13 @@ Command:
 Output:
 screenshot 1_a
 
-### 
+### find .pes/objects -type f Output
+
+Command:
+find .pes/objects -type f
+
+Output:
+screenshot 1_b
 
 ---
 
